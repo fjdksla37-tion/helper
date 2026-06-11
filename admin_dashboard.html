@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관리자 대시보드</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0c0f; --surface:#111318; --surface2:#181c24; --surface3:#1e2330;
+  --border:rgba(255,255,255,0.06); --border2:rgba(255,255,255,0.12);
+  --accent:#3b82f6; --accent2:#10b981; --warn:#f59e0b; --danger:#ef4444;
+  --text:#e2e8f0; --muted:#64748b;
+  --mono:'IBM Plex Mono',monospace; --sans:'Noto Sans KR',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;min-height:100vh}
+
+/* ── 로그인 화면 ── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
+.login-card{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:40px 36px;width:360px}
+.login-logo{font-family:var(--mono);font-size:13px;color:var(--accent);letter-spacing:.1em;margin-bottom:6px}
+.login-title{font-size:20px;font-weight:600;margin-bottom:4px}
+.login-sub{font-size:12px;color:var(--muted);margin-bottom:28px}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:11px;color:var(--muted);margin-bottom:6px;font-family:var(--mono);letter-spacing:.04em}
+.form-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 14px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;transition:border .15s}
+.form-input:focus{border-color:var(--accent)}
+.login-btn{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;margin-top:8px}
+.login-btn:hover{background:#2563eb}
+.login-btn:disabled{background:var(--muted);cursor:not-allowed}
+.login-err{color:var(--danger);font-size:11px;font-family:var(--mono);margin-top:10px;text-align:center;min-height:16px}
+.login-footer{font-size:10px;color:var(--muted);text-align:center;margin-top:20px;font-family:var(--mono)}
+
+/* ── 대시보드 화면 ── */
+#dashboard-screen{display:none;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;border-bottom:1px solid var(--border);background:var(--surface)}
+.logo{font-family:var(--mono);font-size:14px;letter-spacing:.1em}.logo em{color:var(--accent);font-style:normal}
+.header-right{display:flex;align-items:center;gap:12px}
+.admin-name{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--surface2);padding:3px 10px;border-radius:3px;border:1px solid var(--border)}
+.logout-btn{padding:5px 12px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:4px;font-size:11px;font-family:var(--mono);cursor:pointer;transition:.15s}
+.logout-btn:hover{border-color:var(--danger);color:var(--danger)}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}
+
+.layout{display:flex;flex:1}
+nav{width:196px;background:var(--surface);border-right:1px solid var(--border);padding:16px 0;flex-shrink:0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer;color:var(--muted);font-size:12px;transition:.12s;border-left:2px solid transparent;user-select:none}
+.nav-item:hover{color:var(--text);background:var(--surface2)}
+.nav-item.active{color:var(--accent);background:rgba(59,130,246,.07);border-left-color:var(--accent)}
+.nav-sep{height:1px;background:var(--border);margin:8px 18px}
+main{flex:1;overflow:auto;padding:24px 28px}
+
+/* ── 페이지 ── */
+.page{display:none}.page.active{display:block}
+
+/* ── 통계 카드 ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px 18px;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stat-card.c-blue::before{background:var(--accent)}.stat-card.c-green::before{background:var(--accent2)}
+.stat-card.c-warn::before{background:var(--warn)}.stat-card.c-red::before{background:var(--danger)}
+.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;font-family:var(--mono)}
+.stat-val{font-family:var(--mono);font-size:28px;font-weight:600}
+.stat-val.blue{color:var(--accent)}.stat-val.green{color:var(--accent2)}.stat-val.warn{color:var(--warn)}.stat-val.red{color:var(--danger)}
+.stat-sub{font-size:10px;color:var(--muted);margin-top:4px}
+
+/* ── 섹션 ── */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sec-title{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.sec-actions{display:flex;gap:8px}
+
+/* ── 버튼 ── */
+.btn{padding:7px 14px;border-radius:5px;border:none;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:500;transition:.12s;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#2563eb}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}.btn-ghost:hover{border-color:var(--border2);color:var(--text)}
+.btn-danger{background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)}.btn-danger:hover{background:rgba(239,68,68,.2)}
+.btn-warn{background:rgba(245,158,11,.1);color:var(--warn);border:1px solid rgba(245,158,11,.2)}.btn-warn:hover{background:rgba(245,158,11,.2)}
+.btn-sm{padding:4px 10px;font-size:11px}.btn-xs{padding:3px 8px;font-size:10px;font-family:var(--mono)}
+
+/* ── 테이블 ── */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead tr{border-bottom:1px solid var(--border2)}
+th{padding:10px 14px;text-align:left;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-family:var(--mono);font-weight:500;background:var(--surface2)}
+td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+
+/* ── 배지 ── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:10px;font-family:var(--mono);white-space:nowrap}
+.b-green{background:rgba(16,185,129,.1);color:var(--accent2);border:1px solid rgba(16,185,129,.2)}
+.b-red{background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.15)}
+.b-blue{background:rgba(59,130,246,.1);color:var(--accent);border:1px solid rgba(59,130,246,.2)}
+.b-gray{background:rgba(100,116,139,.1);color:var(--muted);border:1px solid var(--border)}
+.b-warn{background:rgba(245,158,11,.1);color:var(--warn);border:1px solid rgba(245,158,11,.2)}
+.dot{width:5px;height:5px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dot-g{background:#22c55e}.dot-r{background:var(--danger)}.dot-b{background:var(--accent)}.dot-w{background:var(--warn)}
+
+/* ── 앱 칩 ── */
+.app-chips{display:flex;flex-wrap:wrap;gap:4px}
+.app-chip{padding:2px 7px;border-radius:3px;font-size:10px;font-family:var(--mono);background:rgba(59,130,246,.08);color:var(--accent);border:1px solid rgba(59,130,246,.15)}
+.ip{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.ts-mono{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+/* ── 모달 ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface2);border:1px solid var(--border2);border-radius:10px;width:500px;max-height:90vh;overflow-y:auto;padding:26px}
+.modal-title{font-family:var(--mono);font-size:13px;color:var(--text);margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:14px;border-top:1px solid var(--border)}
+
+/* ── 앱 토글 ── */
+.app-toggle-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+.app-toggle{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:5px;border:1px solid var(--border);cursor:pointer;transition:.12s;user-select:none}
+.app-toggle.on{background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.25)}
+.toggle-box{width:13px;height:13px;border-radius:2px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.12s}
+.app-toggle.on .toggle-box{background:var(--accent);border-color:var(--accent)}
+.toggle-ck{display:none;color:#fff;font-size:9px;font-weight:700;line-height:1}
+.app-toggle.on .toggle-ck{display:block}
+.app-toggle-name{font-family:var(--mono);font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-toggle.on .app-toggle-name{color:var(--text)}
+
+/* ── 검색/필터 ── */
+.filters{display:flex;gap:8px;margin-bottom:14px}
+.search-input{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:7px 12px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;width:220px}
+.search-input:focus{border-color:var(--accent)}
+.filter-sel{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:7px 12px;color:var(--text);font-family:var(--sans);font-size:12px;outline:none;cursor:pointer}
+
+/* ── 관리자 설정 탭 ── */
+.admin-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:14px}
+.admin-card-title{font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:12px;letter-spacing:.06em}
+
+/* ── 빈 상태 ── */
+.empty{text-align:center;padding:40px;color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* ── 토스트 ── */
+#toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:6px;font-size:12px;font-family:var(--mono);z-index:999;transition:opacity .3s;opacity:0;pointer-events:none}
+#toast.show{opacity:1}
+#toast.ok{background:rgba(16,185,129,.15);color:var(--accent2);border:1px solid rgba(16,185,129,.25)}
+#toast.err{background:rgba(239,68,68,.1);color:var(--danger);border:1px solid rgba(239,68,68,.2)}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- ━━━ 로그인 화면 ━━━ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">ADMIN / PANEL</div>
+    <div class="login-title">관리자 로그인</div>
+    <div class="login-sub">허가된 관리자만 접근할 수 있습니다</div>
+
+    <div class="form-group">
+      <label class="form-label">관리자 ID</label>
+      <input class="form-input" id="login-id" placeholder="관리자 아이디" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label">비밀번호</label>
+      <input class="form-input" type="password" id="login-pw" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+
+    <button class="login-btn" id="login-btn" onclick="doLogin()">로그인</button>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-footer">© 프로그램 통합버전 관리자</div>
+  </div>
+</div>
+
+<!-- ━━━ 대시보드 화면 ━━━ -->
+<div id="dashboard-screen">
+  <header>
+    <div class="logo"><em>ADMIN</em> / DASHBOARD</div>
+    <div class="header-right">
+      <div class="live-dot"></div>
+      <div class="admin-name" id="admin-name-tag">관리자</div>
+      <button class="logout-btn" onclick="doLogout()">로그아웃</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav>
+      <div class="nav-item active" data-page="users" onclick="goPage(this)">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        사용자 관리
+      </div>
+      <div class="nav-item" data-page="logs" onclick="goPage(this)">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 12h6M9 16h6M7 4h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
+        접속 로그
+      </div>
+      <div class="nav-sep"></div>
+      <div class="nav-item" data-page="settings" onclick="goPage(this)">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        관리자 설정
+      </div>
+    </nav>
+
+    <main>
+      <!-- ━━━ 사용자 관리 ━━━ -->
+      <div class="page active" id="page-users">
+        <div class="stats-row">
+          <div class="stat-card c-blue"><div class="stat-label">전체 사용자</div><div class="stat-val blue" id="s-total">—</div><div class="stat-sub">등록된 IP 수</div></div>
+          <div class="stat-card c-green"><div class="stat-label">활성</div><div class="stat-val green" id="s-active">—</div><div class="stat-sub">is_active = true</div></div>
+          <div class="stat-card c-warn"><div class="stat-label">현재 접속 중</div><div class="stat-val warn" id="s-online">—</div><div class="stat-sub">세션 활성</div></div>
+          <div class="stat-card c-red"><div class="stat-label">차단</div><div class="stat-val red" id="s-blocked">—</div><div class="stat-sub">is_active = false</div></div>
+        </div>
+        <div class="sec-header">
+          <div class="sec-title">사용자 목록</div>
+          <div class="sec-actions">
+            <button class="btn btn-ghost btn-sm" onclick="loadUsers()">↻ 새로고침</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ 사용자 추가</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>식별명</th><th>허가 IP</th><th>허가된 앱</th><th>유효기간</th><th>상태</th><th>등록일</th><th>액션</th></tr></thead>
+            <tbody id="user-tbody"><tr><td colspan="7" class="empty">로딩 중...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ━━━ 접속 로그 ━━━ -->
+      <div class="page" id="page-logs">
+        <div class="stats-row">
+          <div class="stat-card c-blue"><div class="stat-label">오늘 접속</div><div class="stat-val blue" id="l-today">—</div><div class="stat-sub">금일 접속 횟수</div></div>
+          <div class="stat-card c-green"><div class="stat-label">현재 접속 중</div><div class="stat-val green" id="l-online">—</div><div class="stat-sub">미종료 세션</div></div>
+          <div class="stat-card c-warn"><div class="stat-label">평균 사용시간</div><div class="stat-val warn" id="l-avg">—</div><div class="stat-sub">분 (오늘 기준)</div></div>
+          <div class="stat-card c-red"><div class="stat-label">전체 로그</div><div class="stat-val red" id="l-total">—</div><div class="stat-sub">누적 접속 기록</div></div>
+        </div>
+        <div class="sec-header">
+          <div class="sec-title">접속 로그</div>
+          <button class="btn btn-ghost btn-sm" onclick="loadLogs()">↻ 새로고침</button>
+        </div>
+        <div class="filters">
+          <input class="search-input" id="log-search" placeholder="IP 또는 식별명 검색..." oninput="renderLogs()">
+          <select class="filter-sel" id="log-filter" onchange="renderLogs()">
+            <option value="all">전체</option>
+            <option value="active">접속 중</option>
+            <option value="done">종료됨</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>식별명</th><th>IP 주소</th><th>접속 시간</th><th>종료 시간</th><th>사용 시간</th><th>상태</th></tr></thead>
+            <tbody id="log-tbody"><tr><td colspan="6" class="empty">로딩 중...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ━━━ 관리자 설정 ━━━ -->
+      <div class="page" id="page-settings">
+        <div class="sec-header"><div class="sec-title">관리자 계정 설정</div></div>
+
+        <div class="admin-card">
+          <div class="admin-card-title">// 관리자 계정 목록</div>
+          <div class="table-wrap" style="margin-bottom:14px">
+            <table>
+              <thead><tr><th>관리자 ID</th><th>등록일</th><th>액션</th></tr></thead>
+              <tbody id="admin-tbody"><tr><td colspan="3" class="empty">로딩 중...</td></tr></tbody>
+            </table>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAddAdminModal()">+ 관리자 추가</button>
+        </div>
+
+        <div class="admin-card">
+          <div class="admin-card-title">// 비밀번호 변경</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end">
+            <div>
+              <div class="form-label" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:6px">현재 비밀번호</div>
+              <input class="form-input" type="password" id="pw-current" placeholder="현재 비밀번호">
+            </div>
+            <div>
+              <div class="form-label" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:6px">새 비밀번호</div>
+              <input class="form-input" type="password" id="pw-new" placeholder="새 비밀번호">
+            </div>
+            <div>
+              <div class="form-label" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:6px">새 비밀번호 확인</div>
+              <input class="form-input" type="password" id="pw-confirm" placeholder="새 비밀번호 확인">
+            </div>
+            <button class="btn btn-primary btn-sm" style="height:38px" onclick="changePassword()">변경</button>
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <div class="admin-card-title">// Supabase 연결 정보</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);line-height:2">
+            <div>URL: <span style="color:var(--accent)" id="info-url">—</span></div>
+            <div>상태: <span class="badge b-green">연결됨 ✓</span></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ━━━ 사용자 추가 모달 ━━━ -->
+<div class="modal-bg" id="add-modal">
+  <div class="modal">
+    <div class="modal-title">// 사용자 추가</div>
+    <div class="form-group"><label class="form-label">식별명</label><input class="form-input" id="add-label" placeholder="예: 홍길동, A사무소"></div>
+    <div class="form-group"><label class="form-label">허가 IP (공인 IP)</label><input class="form-input" id="add-ip" placeholder="예: 121.34.56.78"></div>
+    <div class="form-group"><label class="form-label">유효기간 (비워두면 무제한)</label><input class="form-input" id="add-expiry" type="date"></div>
+    <div class="form-group">
+      <label class="form-label">허가할 앱</label>
+      <div class="app-toggle-grid" id="add-app-grid"></div>
+      <div style="margin-top:8px;display:flex;gap:6px">
+        <button class="btn btn-ghost btn-xs" onclick="toggleAllApps('add',true)">전체 선택</button>
+        <button class="btn btn-ghost btn-xs" onclick="toggleAllApps('add',false)">전체 해제</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-modal')">취소</button>
+      <button class="btn btn-primary" onclick="addUser()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━ 사용자 수정 모달 ━━━ -->
+<div class="modal-bg" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title">// 사용자 수정 — <span id="edit-label-title"></span></div>
+    <div class="form-group"><label class="form-label">식별명</label><input class="form-input" id="edit-label"></div>
+    <div class="form-group"><label class="form-label">허가 IP</label><input class="form-input" id="edit-ip"></div>
+    <div class="form-group"><label class="form-label">유효기간</label><input class="form-input" id="edit-expiry" type="date"></div>
+    <div class="form-group">
+      <label class="form-label">허가할 앱</label>
+      <div class="app-toggle-grid" id="edit-app-grid"></div>
+      <div style="margin-top:8px;display:flex;gap:6px">
+        <button class="btn btn-ghost btn-xs" onclick="toggleAllApps('edit',true)">전체 선택</button>
+        <button class="btn btn-ghost btn-xs" onclick="toggleAllApps('edit',false)">전체 해제</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('edit-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━ 관리자 추가 모달 ━━━ -->
+<div class="modal-bg" id="add-admin-modal">
+  <div class="modal" style="width:360px">
+    <div class="modal-title">// 관리자 추가</div>
+    <div class="form-group"><label class="form-label">관리자 ID</label><input class="form-input" id="new-admin-id" placeholder="영문/숫자"></div>
+    <div class="form-group"><label class="form-label">비밀번호</label><input class="form-input" type="password" id="new-admin-pw" placeholder="비밀번호"></div>
+    <div class="form-group"><label class="form-label">비밀번호 확인</label><input class="form-input" type="password" id="new-admin-pw2" placeholder="비밀번호 확인"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-admin-modal')">취소</button>
+      <button class="btn btn-primary" onclick="addAdmin()">추가</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ============================================================
+//  설정 — GitHub Pages 배포 시 아래 두 줄을 본인 정보로 교체
+// ============================================================
+const SB_URL = "https://ktgeimdxzrhsbpoorhoi.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0Z2VpbWR4enJoc2Jwb29yaG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MjI3NzgsImV4cCI6MjA5NjA5ODc3OH0.rTThb94PJusKiItRbnK5b8ZTXpytfPLDxukdw43yUK0";
+// ============================================================
+
+const APP_LIST = ["협회자동화","PQ작성","수행성과","경력증명서PDF관리","법위반","PDF출력","PDF경력추출","프린터모니터"];
+
+let SB_HDR = {};
+let _users=[], _perms={}, _logs=[], _editId=null, _currentAdmin=null;
+
+// ── SHA-256 해시 ──
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ── Supabase API ──
+async function sbGet(path) {
+  const r = await fetch(`${SB_URL}/rest/v1/${path}`, {headers:SB_HDR});
+  return r.json();
+}
+async function sbPost(path, body) {
+  const r = await fetch(`${SB_URL}/rest/v1/${path}`, {method:'POST',headers:SB_HDR,body:JSON.stringify(body)});
+  return r.json();
+}
+async function sbPatch(path, body) {
+  const r = await fetch(`${SB_URL}/rest/v1/${path}`, {method:'PATCH',headers:SB_HDR,body:JSON.stringify(body)});
+  return r.json();
+}
+async function sbDelete(path) {
+  await fetch(`${SB_URL}/rest/v1/${path}`, {method:'DELETE',headers:SB_HDR});
+}
+
+// ============================================================
+//  로그인
+// ============================================================
+async function doLogin() {
+  const id = document.getElementById('login-id').value.trim();
+  const pw = document.getElementById('login-pw').value;
+  const err = document.getElementById('login-err');
+  const btn = document.getElementById('login-btn');
+
+  if (!id || !pw) { err.textContent = '아이디와 비밀번호를 입력하세요'; return; }
+
+  btn.disabled = true; btn.textContent = '확인 중...';
+  err.textContent = '';
+
+  // Supabase 헤더 세팅
+  SB_HDR = {
+    "apikey": SB_KEY,
+    "Authorization": `Bearer ${SB_KEY}`,
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+  };
+
+  try {
+    const hash = await sha256(pw);
+    const rows = await sbGet(`admins?admin_id=eq.${encodeURIComponent(id)}&password_hash=eq.${hash}&is_active=eq.true`);
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      err.textContent = '아이디 또는 비밀번호가 올바르지 않습니다';
+      btn.disabled = false; btn.textContent = '로그인';
+      return;
+    }
+
+    _currentAdmin = rows[0];
+
+    // 로그인 성공 → 대시보드 표시
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard-screen').style.display = 'flex';
+    document.getElementById('admin-name-tag').textContent = id;
+    document.getElementById('info-url').textContent = SB_URL;
+
+    loadUsers();
+    loadLogs();
+    loadAdmins();
+
+  } catch(e) {
+    err.textContent = '서버 연결 오류. 잠시 후 다시 시도하세요.';
+    btn.disabled = false; btn.textContent = '로그인';
+  }
+}
+
+function doLogout() {
+  if (!confirm('로그아웃 하시겠습니까?')) return;
+  _currentAdmin = null;
+  document.getElementById('login-id').value = '';
+  document.getElementById('login-pw').value = '';
+  document.getElementById('login-err').textContent = '';
+  document.getElementById('login-btn').disabled = false;
+  document.getElementById('login-btn').textContent = '로그인';
+  document.getElementById('dashboard-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ============================================================
+//  네비게이션
+// ============================================================
+function goPage(el) {
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('page-'+el.dataset.page).classList.add('active');
+  if (el.dataset.page==='users')    loadUsers();
+  if (el.dataset.page==='logs')     loadLogs();
+  if (el.dataset.page==='settings') loadAdmins();
+}
+
+// ============================================================
+//  사용자 관리
+// ============================================================
+async function loadUsers() {
+  try {
+    _users = await sbGet("users?order=created_at.desc");
+    const permsArr = await sbGet("user_permissions?select=user_id,allowed_apps");
+    _perms = {};
+    permsArr.forEach(p => { _perms[p.user_id] = p.allowed_apps || []; });
+    const online = await sbGet("access_logs?disconnected_at=is.null&select=user_id");
+
+    document.getElementById('s-total').textContent   = _users.length;
+    document.getElementById('s-active').textContent  = _users.filter(u=>u.is_active).length;
+    document.getElementById('s-online').textContent  = online.length;
+    document.getElementById('s-blocked').textContent = _users.filter(u=>!u.is_active).length;
+    renderUsers();
+  } catch(e) { toast('사용자 로드 실패','err'); }
+}
+
+function renderUsers() {
+  const tbody = document.getElementById('user-tbody');
+  if (!_users.length) { tbody.innerHTML=`<tr><td colspan="7" class="empty">등록된 사용자가 없습니다</td></tr>`; return; }
+  const today = new Date().toISOString().slice(0,10);
+  tbody.innerHTML = _users.map(u => {
+    const apps = _perms[u.id]||[];
+    const chips = apps.length===0
+      ? `<span class="badge b-blue">전체 허가</span>`
+      : apps.map(a=>`<span class="app-chip">${a}</span>`).join('');
+    const status = u.is_active
+      ? `<span class="badge b-green"><span class="dot dot-g"></span>활성</span>`
+      : `<span class="badge b-red"><span class="dot dot-r"></span>차단</span>`;
+    const expired = u.expiry_date && u.expiry_date < today;
+    const expiry = u.expiry_date
+      ? (expired ? `<span class="badge b-warn"><span class="dot dot-w"></span>${u.expiry_date} 만료</span>` : `<span class="ts-mono">${u.expiry_date}</span>`)
+      : `<span class="badge b-gray">무제한</span>`;
+    const togLabel = u.is_active ? '차단' : '활성화';
+    const togClass = u.is_active ? 'btn-danger' : 'btn-warn';
+    return `<tr>
+      <td><strong>${u.label}</strong></td>
+      <td><span class="ip">${u.allowed_ip}</span></td>
+      <td><div class="app-chips">${chips}</div></td>
+      <td>${expiry}</td><td>${status}</td>
+      <td><span class="ts-mono">${(u.created_at||'').slice(0,10)}</span></td>
+      <td style="display:flex;gap:5px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-xs" onclick="openEditModal('${u.id}')">수정</button>
+        <button class="btn ${togClass} btn-xs" onclick="toggleUser('${u.id}',${u.is_active})">${togLabel}</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteUser('${u.id}')">삭제</button>
+      </td></tr>`;
+  }).join('');
+}
+
+function openAddModal() {
+  document.getElementById('add-label').value='';
+  document.getElementById('add-ip').value='';
+  document.getElementById('add-expiry').value='';
+  buildAppGrid('add-app-grid',[]);
+  document.getElementById('add-modal').classList.add('open');
+}
+
+async function addUser() {
+  const label  = document.getElementById('add-label').value.trim();
+  const ip     = document.getElementById('add-ip').value.trim();
+  const expiry = document.getElementById('add-expiry').value||null;
+  if (!label||!ip) { toast('식별명과 IP를 입력하세요','err'); return; }
+  const apps = getCheckedApps('add-app-grid');
+  try {
+    const rows = await sbPost("users",{label,allowed_ip:ip,is_active:true,expiry_date:expiry});
+    const uid = rows[0]?.id;
+    if (!uid) throw new Error();
+    await sbPost("user_permissions",{user_id:uid,allowed_apps:apps});
+    toast(`${label} 추가 완료`,'ok');
+    closeModal('add-modal');
+    loadUsers();
+  } catch(e) { toast('추가 실패: IP 중복 또는 오류','err'); }
+}
+
+function openEditModal(userId) {
+  const u = _users.find(x=>x.id===userId);
+  if (!u) return;
+  _editId = userId;
+  document.getElementById('edit-label-title').textContent = u.label;
+  document.getElementById('edit-label').value  = u.label;
+  document.getElementById('edit-ip').value     = u.allowed_ip;
+  document.getElementById('edit-expiry').value = u.expiry_date||'';
+  buildAppGrid('edit-app-grid',_perms[userId]||[]);
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+async function saveEdit() {
+  const label  = document.getElementById('edit-label').value.trim();
+  const ip     = document.getElementById('edit-ip').value.trim();
+  const expiry = document.getElementById('edit-expiry').value||null;
+  if (!label||!ip) { toast('식별명과 IP를 입력하세요','err'); return; }
+  const apps = getCheckedApps('edit-app-grid');
+  try {
+    await sbPatch(`users?id=eq.${_editId}`,{label,allowed_ip:ip,expiry_date:expiry});
+    await sbPatch(`user_permissions?user_id=eq.${_editId}`,{allowed_apps:apps});
+    toast('수정 완료','ok'); closeModal('edit-modal'); loadUsers();
+  } catch(e) { toast('수정 실패','err'); }
+}
+
+async function toggleUser(userId,isActive) {
+  if (!confirm(isActive?'차단하시겠습니까?':'활성화하시겠습니까?')) return;
+  try {
+    await sbPatch(`users?id=eq.${userId}`,{is_active:!isActive});
+    toast(isActive?'차단 완료':'활성화 완료','ok'); loadUsers();
+  } catch(e) { toast('처리 실패','err'); }
+}
+
+async function deleteUser(userId) {
+  if (!confirm('정말 삭제하시겠습니까?\n접속 로그도 함께 삭제됩니다.')) return;
+  try {
+    await sbDelete(`user_permissions?user_id=eq.${userId}`);
+    await sbDelete(`access_logs?user_id=eq.${userId}`);
+    await sbDelete(`users?id=eq.${userId}`);
+    toast('삭제 완료','ok'); loadUsers();
+  } catch(e) { toast('삭제 실패','err'); }
+}
+
+// ============================================================
+//  접속 로그
+// ============================================================
+async function loadLogs() {
+  try {
+    _logs = await sbGet("access_logs?order=connected_at.desc&limit=200");
+    const userMap = {};
+    _users.forEach(u=>{userMap[u.id]=u.label;});
+    const today = new Date().toISOString().slice(0,10);
+    const todayLogs = _logs.filter(l=>l.connected_at?.slice(0,10)===today);
+    const onlineLogs = _logs.filter(l=>!l.disconnected_at);
+    const durs = _logs.filter(l=>l.disconnected_at&&l.connected_at?.slice(0,10)===today)
+      .map(l=>(new Date(l.disconnected_at)-new Date(l.connected_at))/60000);
+    const avg = durs.length ? Math.round(durs.reduce((a,b)=>a+b,0)/durs.length) : 0;
+    document.getElementById('l-today').textContent  = todayLogs.length;
+    document.getElementById('l-online').textContent = onlineLogs.length;
+    document.getElementById('l-avg').textContent    = avg;
+    document.getElementById('l-total').textContent  = _logs.length;
+    renderLogs();
+  } catch(e) { toast('로그 로드 실패','err'); }
+}
+
+function renderLogs() {
+  const search = (document.getElementById('log-search')?.value||'').toLowerCase();
+  const filter = document.getElementById('log-filter')?.value||'all';
+  const userMap = {}; _users.forEach(u=>{userMap[u.id]=u.label;});
+  let logs = [..._logs];
+  if (search) logs = logs.filter(l=>(l.ip||'').includes(search)||(userMap[l.user_id]||'').toLowerCase().includes(search));
+  if (filter==='active') logs = logs.filter(l=>!l.disconnected_at);
+  if (filter==='done')   logs = logs.filter(l=> l.disconnected_at);
+  const tbody = document.getElementById('log-tbody');
+  if (!logs.length) { tbody.innerHTML=`<tr><td colspan="6" class="empty">로그 없음</td></tr>`; return; }
+  tbody.innerHTML = logs.map(l=>{
+    const label = userMap[l.user_id]||'-';
+    const cin  = l.connected_at    ? new Date(l.connected_at)    : null;
+    const cout = l.disconnected_at ? new Date(l.disconnected_at) : null;
+    const dur  = cin&&cout ? Math.round((cout-cin)/60000) : null;
+    const status = !cout
+      ? `<span class="badge b-blue"><span class="dot dot-b"></span>접속 중</span>`
+      : `<span class="badge b-gray">종료</span>`;
+    const fmt = dt=>dt?dt.toLocaleString('ko-KR'):'-';
+    return `<tr>
+      <td><strong>${label}</strong></td>
+      <td><span class="ip">${l.ip||'-'}</span></td>
+      <td><span class="ts-mono">${fmt(cin)}</span></td>
+      <td><span class="ts-mono">${fmt(cout)}</span></td>
+      <td><span class="ts-mono">${dur!==null?dur+'분':'-'}</span></td>
+      <td>${status}</td></tr>`;
+  }).join('');
+}
+
+// ============================================================
+//  관리자 설정
+// ============================================================
+async function loadAdmins() {
+  try {
+    const rows = await sbGet("admins?select=id,admin_id,created_at,is_active&order=created_at.asc");
+    const tbody = document.getElementById('admin-tbody');
+    if (!rows.length) { tbody.innerHTML=`<tr><td colspan="3" class="empty">관리자 없음</td></tr>`; return; }
+    tbody.innerHTML = rows.map(a=>`<tr>
+      <td><strong>${a.admin_id}</strong> ${a.admin_id===_currentAdmin?.admin_id?'<span class="badge b-blue">현재</span>':''}</td>
+      <td><span class="ts-mono">${(a.created_at||'').slice(0,10)}</span></td>
+      <td>${a.admin_id!==_currentAdmin?.admin_id?`<button class="btn btn-danger btn-xs" onclick="deleteAdmin('${a.id}','${a.admin_id}')">삭제</button>`:'-'}</td>
+    </tr>`).join('');
+  } catch(e) { toast('관리자 로드 실패','err'); }
+}
+
+function openAddAdminModal() {
+  document.getElementById('new-admin-id').value='';
+  document.getElementById('new-admin-pw').value='';
+  document.getElementById('new-admin-pw2').value='';
+  document.getElementById('add-admin-modal').classList.add('open');
+}
+
+async function addAdmin() {
+  const id  = document.getElementById('new-admin-id').value.trim();
+  const pw  = document.getElementById('new-admin-pw').value;
+  const pw2 = document.getElementById('new-admin-pw2').value;
+  if (!id||!pw) { toast('아이디와 비밀번호를 입력하세요','err'); return; }
+  if (pw!==pw2) { toast('비밀번호가 일치하지 않습니다','err'); return; }
+  try {
+    const hash = await sha256(pw);
+    await sbPost("admins",{admin_id:id,password_hash:hash,is_active:true});
+    toast(`${id} 관리자 추가 완료`,'ok');
+    closeModal('add-admin-modal');
+    loadAdmins();
+  } catch(e) { toast('추가 실패: 중복 ID 또는 오류','err'); }
+}
+
+async function deleteAdmin(uid, adminId) {
+  if (!confirm(`'${adminId}' 관리자를 삭제하시겠습니까?`)) return;
+  try {
+    await sbDelete(`admins?id=eq.${uid}`);
+    toast('삭제 완료','ok'); loadAdmins();
+  } catch(e) { toast('삭제 실패','err'); }
+}
+
+async function changePassword() {
+  const cur  = document.getElementById('pw-current').value;
+  const nw   = document.getElementById('pw-new').value;
+  const conf = document.getElementById('pw-confirm').value;
+  if (!cur||!nw) { toast('모든 칸을 입력하세요','err'); return; }
+  if (nw!==conf) { toast('새 비밀번호가 일치하지 않습니다','err'); return; }
+  const curHash = await sha256(cur);
+  if (curHash !== _currentAdmin?.password_hash) { toast('현재 비밀번호가 올바르지 않습니다','err'); return; }
+  const newHash = await sha256(nw);
+  try {
+    await sbPatch(`admins?id=eq.${_currentAdmin.id}`,{password_hash:newHash});
+    _currentAdmin.password_hash = newHash;
+    document.getElementById('pw-current').value='';
+    document.getElementById('pw-new').value='';
+    document.getElementById('pw-confirm').value='';
+    toast('비밀번호 변경 완료','ok');
+  } catch(e) { toast('변경 실패','err'); }
+}
+
+// ============================================================
+//  앱 토글 헬퍼
+// ============================================================
+function buildAppGrid(gridId,checkedApps) {
+  const grid = document.getElementById(gridId);
+  const allChecked = checkedApps.length===0;
+  grid.innerHTML = APP_LIST.map(a=>{
+    const on = allChecked||checkedApps.includes(a);
+    return `<label class="app-toggle ${on?'on':''}" onclick="toggleAppChip(this)">
+      <input type="checkbox" value="${a}" ${on?'checked':''} style="display:none">
+      <div class="toggle-box"><span class="toggle-ck">✓</span></div>
+      <span class="app-toggle-name">${a}</span></label>`;
+  }).join('');
+}
+function toggleAppChip(el) { el.classList.toggle('on'); el.querySelector('input').checked=el.classList.contains('on'); }
+function toggleAllApps(prefix,on) {
+  document.querySelectorAll(`#${prefix}-app-grid .app-toggle`).forEach(el=>{ el.classList.toggle('on',on); el.querySelector('input').checked=on; });
+}
+function getCheckedApps(gridId) { return [...document.querySelectorAll(`#${gridId} input:checked`)].map(i=>i.value); }
+
+// ============================================================
+//  모달 / 토스트
+// ============================================================
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
+
+let _tt;
+function toast(msg,type='ok') {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className=`show ${type}`;
+  clearTimeout(_tt); _tt=setTimeout(()=>{el.className='';},2500);
+}
+
+// 엔터키 로그인
+document.getElementById('login-id').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+</script>
+</body>
+</html>
